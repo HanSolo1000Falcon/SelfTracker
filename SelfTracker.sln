@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SelfTracker", "SelfTracker\SelfTracker.csproj", "{FDE80AD6-4712-490A-A821-75C5347A631D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FDE80AD6-4712-490A-A821-75C5347A631D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDE80AD6-4712-490A-A821-75C5347A631D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDE80AD6-4712-490A-A821-75C5347A631D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDE80AD6-4712-490A-A821-75C5347A631D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
