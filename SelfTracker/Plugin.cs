@@ -28,8 +28,8 @@ public class Plugin : BaseUnityPlugin
     private void Awake()
     {
         ConfigFile configFile = new ConfigFile(Path.Combine(Paths.ConfigPath, "SelfTracker.cfg"), true);
-        webhookUrl = configFile.Bind("General", "Webhook URL", "https://discord.com/api/webhooks/1411056966654099456/yc4jXw5s9wJGb8AERE5GpS6t4uxUqnXKxULzEznG637HJUd8y4OevO8O-kFASOpGh4oN", "Webhook URL to send the data to");
-        playerName = configFile.Bind("General", "Player Name", "dsaklfhdsafjkdsafgdsafghdsafhdlskjfhsda", "Your player name, so you can identify who started the game");
+        webhookUrl = configFile.Bind("General", "Webhook URL", "https://discord.com/api/webhooks/", "Webhook URL to send the data to");
+        playerName = configFile.Bind("General", "Player Name", "username", "Your player name, so you can identify who started the game");
         
         Application.quitting += OnQuit;
         DontDestroyOnLoad(gameObject);
