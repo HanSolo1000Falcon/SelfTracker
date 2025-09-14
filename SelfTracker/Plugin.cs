@@ -6,6 +6,7 @@ using System.Text;
 using BepInEx;
 using BepInEx.Configuration;
 using GorillaNetworking;
+using HarmonyLib;
 using Photon.Pun;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -16,23 +17,36 @@ namespace SelfTracker;
 [BepInPlugin(Constants.PluginGuid, Constants.PluginName, Constants.PluginVersion)]
 public class Plugin : BaseUnityPlugin
 {
+    public static Plugin Instance { get; private set; }
+    
+    public bool IsInRoom;
+    public string CurrentRoomName;
+    
+    public ConfigEntry<string> PlayerName;
     private ConfigEntry<string> webhookUrl;
-    private ConfigEntry<string> playerName;
+
+    private string messageId;
     
     private HttpClient client = new();
 
-    private bool isInRoom;
-    
-    private string currentRoomName;
-
     private void Awake()
     {
+        Instance = this;
+        
         ConfigFile configFile = new ConfigFile(Path.Combine(Paths.ConfigPath, "SelfTracker.cfg"), true);
         webhookUrl = configFile.Bind("General", "Webhook URL", "https://discord.com/api/webhooks/1411056966654099456/yc4jXw5s9wJGb8AERE5GpS6t4uxUqnXKxULzEznG637HJUd8y4OevO8O-kFASOpGh4oN", "Webhook URL to send the data to");
-        playerName = configFile.Bind("General", "Player Name", "dsaklfhdsafjkdsafgdsafghdsafhdlskjfhsda", "Your player name, so you can identify who started the game");
+        PlayerName = configFile.Bind("General", "Player Name", "dsaklfhdsafjkdsafgdsafghdsafhdlskjfhsda", "Your player name, so you can identify who started the game");
         
         Application.quitting += OnQuit;
         DontDestroyOnLoad(gameObject);
+    }
+
+    private void Start()
+    {
+        GorillaTagger.OnPlayerSpawned(OnGameInitialized);
+        
+        Harmony harmony = new(Constants.PluginGuid);
+        harmony.PatchAll();
     }
     
     private void OnGameInitialized()
@@ -41,7 +55,7 @@ public class Plugin : BaseUnityPlugin
 {{
     ""embeds"": [
         {{
-            ""title"": ""{playerName.Value} has started Gorilla Tag"",
+            ""title"": ""{PlayerName.Value} has started Gorilla Tag"",
             ""color"": 7415295,
             ""footer"": {{ ""text"": ""Self Tracker by HanSolo1000Falcon"" }}
         }}
@@ -62,19 +76,24 @@ public class Plugin : BaseUnityPlugin
         if (fuckingWeirdo.IsLocal)
             return;
         
+        string map = PhotonNetworkController.Instance.currentJoinTrigger == null
+            ? "forest"
+            : PhotonNetworkController.Instance.currentJoinTrigger.networkZone;
+        map = map.ToUpper();
+        
         string json = $@"
 {{
     ""embeds"": [
         {{
-            ""title"": ""{fuckingWeirdo.NickName} has joined {playerName.Value}s room"",
-            ""description"": ""Players in room: `{NetworkSystem.Instance.RoomPlayerCount}`"",
+            ""title"": ""{PlayerName.Value} has joined code `{CurrentRoomName}`"",
+            ""description"": ""In game name: `{PhotonNetwork.LocalPlayer.NickName}`\nPlayers in room: `{NetworkSystem.Instance.RoomPlayerCount}`\nMap: `{map}`\nPublic room: `{PhotonNetwork.CurrentRoom.IsVisible}`\nIs Modded: `{NetworkSystem.Instance.GameModeString.Contains("MODDED")}`\nGamemode: `{GetGamemodeKey(NetworkSystem.Instance.GameModeString)}`\nQueue: `{GetQueueKey(NetworkSystem.Instance.GameModeString)}`"",
             ""color"": 7415295,
             ""footer"": {{ ""text"": ""Self Tracker by HanSolo1000Falcon"" }}
         }}
     ]
 }}";
         
-        SendWebhook(json);
+        SendWebhook(json, true);
     }
     
     private void OnPlayerLeft(NetPlayer fuckingWeirdo)
@@ -82,26 +101,31 @@ public class Plugin : BaseUnityPlugin
         if (fuckingWeirdo.IsLocal)
             return;
         
+        string map = PhotonNetworkController.Instance.currentJoinTrigger == null
+            ? "forest"
+            : PhotonNetworkController.Instance.currentJoinTrigger.networkZone;
+        map = map.ToUpper();
+        
         string json = $@"
 {{
     ""embeds"": [
         {{
-            ""title"": ""{fuckingWeirdo.NickName} has left {playerName.Value}s room"",
-            ""description"": ""Players in room: `{NetworkSystem.Instance.RoomPlayerCount}`"",
+            ""title"": ""{PlayerName.Value} has joined code `{CurrentRoomName}`"",
+            ""description"": ""In game name: `{PhotonNetwork.LocalPlayer.NickName}`\nPlayers in room: `{NetworkSystem.Instance.RoomPlayerCount}`\nMap: `{map}`\nPublic room: `{PhotonNetwork.CurrentRoom.IsVisible}`\nIs Modded: `{NetworkSystem.Instance.GameModeString.Contains("MODDED")}`\nGamemode: `{GetGamemodeKey(NetworkSystem.Instance.GameModeString)}`\nQueue: `{GetQueueKey(NetworkSystem.Instance.GameModeString)}`"",
             ""color"": 7415295,
             ""footer"": {{ ""text"": ""Self Tracker by HanSolo1000Falcon"" }}
         }}
     ]
 }}";
         
-        SendWebhook(json);
+        SendWebhook(json, true);
     }
 
     private void OnJoinedRoom()
     {
-        isInRoom = true;
+        IsInRoom = true;
         
-        currentRoomName = NetworkSystem.Instance.RoomName;
+        CurrentRoomName = NetworkSystem.Instance.RoomName;
         string map = PhotonNetworkController.Instance.currentJoinTrigger == null
             ? "forest"
             : PhotonNetworkController.Instance.currentJoinTrigger.networkZone;
@@ -111,7 +135,7 @@ public class Plugin : BaseUnityPlugin
 {{
     ""embeds"": [
         {{
-            ""title"": ""{playerName.Value} has joined code `{currentRoomName}`"",
+            ""title"": ""{PlayerName.Value} has joined code `{CurrentRoomName}`"",
             ""description"": ""In game name: `{PhotonNetwork.LocalPlayer.NickName}`\nPlayers in room: `{NetworkSystem.Instance.RoomPlayerCount}`\nMap: `{map}`\nPublic room: `{PhotonNetwork.CurrentRoom.IsVisible}`\nIs Modded: `{NetworkSystem.Instance.GameModeString.Contains("MODDED")}`\nGamemode: `{GetGamemodeKey(NetworkSystem.Instance.GameModeString)}`\nQueue: `{GetQueueKey(NetworkSystem.Instance.GameModeString)}`"",
             ""color"": 7415295,
             ""footer"": {{ ""text"": ""Self Tracker by HanSolo1000Falcon"" }}
@@ -128,7 +152,7 @@ public class Plugin : BaseUnityPlugin
 {{
     ""embeds"": [
         {{
-            ""title"": ""{playerName.Value} has quit Gorilla Tag"",
+            ""title"": ""{PlayerName.Value} has quit Gorilla Tag"",
             ""color"": 7415295,
             ""footer"": {{ ""text"": ""Self Tracker by HanSolo1000Falcon"" }}
         }}
@@ -140,16 +164,16 @@ public class Plugin : BaseUnityPlugin
 
     private void OnLeftRoom()
     {
-        if (!isInRoom)
+        if (!IsInRoom)
             return;
         
-        isInRoom = false;
+        IsInRoom = false;
         
         string json = $@"
 {{
     ""embeds"": [
         {{
-            ""title"": ""{playerName.Value} has left the code `{currentRoomName}`"",
+            ""title"": ""{PlayerName.Value} has left the code `{CurrentRoomName}`"",
             ""color"": 7415295,
             ""footer"": {{ ""text"": ""Self Tracker by HanSolo1000Falcon"" }}
         }}
@@ -159,7 +183,7 @@ public class Plugin : BaseUnityPlugin
         SendWebhook(json);
     }
     
-    private string GetGamemodeKey(string gamemodeString)
+    public string GetGamemodeKey(string gamemodeString)
     {
         gamemodeString = gamemodeString.ToUpper();
         if (gamemodeString.Contains("CASUAL")) return "CASUAL";
@@ -173,7 +197,7 @@ public class Plugin : BaseUnityPlugin
         return gamemodeString;
     }
 
-    private string GetQueueKey(string gamemodeString)
+    public string GetQueueKey(string gamemodeString)
     {
         gamemodeString = gamemodeString.ToUpper();
         if (gamemodeString.Contains("DEFAULT")) return "DEFAULT";
@@ -182,9 +206,9 @@ public class Plugin : BaseUnityPlugin
         return gamemodeString;
     }
 
-    private void SendWebhook(string json)
+    public void SendWebhook(string json, bool isEditing = false)
     {
-        StartCoroutine(SendWebhookAsync(json));
+        StartCoroutine(SendWebhookAsync(json, isEditing));
 
         /*try
         {
@@ -193,10 +217,21 @@ public class Plugin : BaseUnityPlugin
         } catch { }*/
     }
 
-    private IEnumerator SendWebhookAsync(string json)
+    private IEnumerator SendWebhookAsync(string json, bool isEditing)
     {
-        var request = new UnityWebRequest(webhookUrl.Value, "POST");
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+        UnityWebRequest request;
+
+        if (!isEditing)
+        {
+            request = new UnityWebRequest(webhookUrl.Value + "?wait=true", "POST");
+        }
+        else
+        {
+            string editUrl = $"{webhookUrl.Value}/messages/{messageId}";
+            request = new UnityWebRequest(editUrl, "PATCH");
+        }
+
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
@@ -204,10 +239,30 @@ public class Plugin : BaseUnityPlugin
         yield return request.SendWebRequest();
 
         if (request.result != UnityWebRequest.Result.Success)
-            Debug.LogError($"Webhook failed: {request.error}");
+        {
+            Debug.LogError($"Webhook {(isEditing ? "edit" : "send")} failed: {request.error}");
+        }
         else
-            Debug.Log("Webhook sent successfully.");
+        {
+            Debug.Log($"Webhook {(isEditing ? "edited" : "sent")} successfully.");
+
+            if (!isEditing)
+            {
+                var responseText = request.downloadHandler.text;
+                int idIndex = responseText.IndexOf("\"id\":\"", StringComparison.Ordinal);
+                if (idIndex >= 0)
+                {
+                    int start = idIndex + 6;
+                    int end = responseText.IndexOf('"', start);
+                    messageId = responseText.Substring(start, end - start);
+                    Debug.Log($"Captured messageId: {messageId}");
+                }
+                else
+                {
+                    Debug.LogError("Failed to parse messageId from webhook response: " + responseText);
+                }
+            }
+
+        }
     }
-    
-    private void Start() => GorillaTagger.OnPlayerSpawned(OnGameInitialized);
 }
